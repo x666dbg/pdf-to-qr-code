@@ -1,5 +1,13 @@
 "use client";
 import { useState } from "react";
+import { createClient } from "@supabase/supabase-js";
+import QRCode from "qrcode";
+
+// Inisialisasi Supabase client (pakai env public)
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 
 export default function HomePage() {
   const [file, setFile] = useState<File | null>(null);
@@ -16,20 +24,35 @@ export default function HomePage() {
     setQrCode(null);
 
     try {
-      const formData = new FormData();
-      if (file) formData.append("pdf", file);
+      if (!file) throw new Error("Pilih file PDF dulu");
 
-      const res = await fetch("/api/upload", {
-        method: "POST",
-        body: formData,
-      });
+      // buat nama file unik
+      const fileName = `${Date.now()}-${file.name}`;
 
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Gagal upload");
-      setPdfUrl(data.pdfUrl);
-      setQrCode(data.qrCode);
+      // Upload langsung ke bucket Supabase
+      const { error: uploadError } = await supabase.storage
+        .from(process.env.SUPABASE_BUCKET_NAME || "pdfs")
+        .upload(fileName, file, {
+          contentType: "application/pdf",
+          upsert: false,
+        });
+
+      if (uploadError) throw uploadError;
+
+      // Ambil public URL
+      const { data: publicUrlData } = supabase.storage
+        .from(process.env.SUPABASE_BUCKET_NAME || "pdfs")
+        .getPublicUrl(fileName);
+
+      const publicUrl = publicUrlData.publicUrl;
+      setPdfUrl(publicUrl);
+
+      // Generate QR code dari URL
+      const qrDataUrl = await QRCode.toDataURL(publicUrl);
+      setQrCode(qrDataUrl);
     } catch (err: any) {
-      setError(err.message);
+      console.error(err);
+      setError(err.message || "Terjadi kesalahan saat upload");
     } finally {
       setLoading(false);
     }
