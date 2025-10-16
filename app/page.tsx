@@ -37,7 +37,7 @@ export default function HomePage() {
 
   return (
     <main className="min-h-screen flex flex-col items-center justify-center bg-gray-950 text-white p-6">
-      <h1 className="text-3xl font-bold mb-6">PDF → QR Generator</h1>
+      <h1 className="text-3xl font-bold mb-6">PDF → QR Generator by RzkyO</h1>
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-4 items-center">
         <input
